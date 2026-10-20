@@ -16,6 +16,7 @@ h2{text-align:center;color:var(--green);margin-top:0}
 .btn:hover{filter:brightness(.95)}
 .btn.danger{background:var(--red)}
 .btn.light{background:var(--mint);color:var(--dark)}
+.textBtn{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;margin-top:15px;width:100%;font-size:0.9rem;}
 #adminArea{display:none;}
 .adminToolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
 .adminStats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
@@ -29,17 +30,43 @@ th{background:#eff6f2}
 .small{font-size:.8rem;color:var(--muted)}
 .loading{color:var(--muted);padding:18px;text-align:center;font-style:italic}
 .topnav{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.errorMsg{color:var(--red);text-align:center;display:none;font-weight:bold;font-size:0.9rem;margin-top:10px;}
 </style></head>
 <body>
 <div class="wrap">
+  
   <!-- LOGIN SCREEN -->
   <div id="loginScreen" class="panel">
     <h2>🔒 Admin Login</h2>
-    <p style="text-align:center;color:var(--muted);font-size:0.9rem;margin-bottom:20px;">Enter ID and Password to access live data</p>
     <div class="field"><label>Admin ID</label><input id="adminId" placeholder="e.g. amlan"></div>
     <div class="field"><label>Password</label><input id="adminPass" type="password" placeholder="Enter password"></div>
     <button class="btn" onclick="login()">Login</button>
-    <p id="loginError" style="color:var(--red);text-align:center;display:none;font-weight:bold;">Wrong ID or Password!</p>
+    <p id="loginError" class="errorMsg">Wrong ID or Password!</p>
+    <button class="textBtn" onclick="showResetScreen()">Forgot Password?</button>
+  </div>
+
+  <!-- PASSWORD RESET SCREEN -->
+  <div id="resetScreen" class="panel" style="display:none;">
+    <h2>🔑 Reset Password</h2>
+    <p style="text-align:center;color:var(--muted);font-size:0.85rem;">Enter Security Question Answer to generate OTP</p>
+    
+    <!-- Step 1: Answer Secret Question -->
+    <div id="resetStep1">
+      <div class="field"><label>Security Question</label><input value="What is your favorite city?" disabled style="background:#eee"></div>
+      <div class="field"><label>Your Answer</label><input id="secretAnswer" placeholder="Enter answer"></div>
+      <button class="btn" onclick="verifyAnswer()">Verify Answer</button>
+    </div>
+
+    <!-- Step 2: Enter OTP & New Password -->
+    <div id="resetStep2" style="display:none;">
+      <div class="field"><label>Your OTP (Valid for 5 mins)</label><input id="otpInput" placeholder="Enter OTP shown below"></div>
+      <p style="font-size: 1.2rem; text-align:center; color:var(--green); font-weight:bold; background:var(--mint); padding:10px; border-radius:10px;" id="otpDisplay">----</p>
+      <div class="field"><label>New Password</label><input id="newPass" type="password" placeholder="New password"></div>
+      <button class="btn" onclick="resetPassword()">Update Password</button>
+    </div>
+    
+    <p id="resetError" class="errorMsg"></p>
+    <button class="textBtn" onclick="location.reload()">Back to Login</button>
   </div>
 
   <!-- MAIN ADMIN AREA -->
@@ -71,19 +98,23 @@ th{background:#eff6f2}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ==========================================
-// 1. YAHAN APNA ID AUR PASSWORD SET KAREIN
+// 1. LOGIN & SECURITY SETTINGS
 // ==========================================
-const MY_ADMIN_ID = "yakama_admin";    // Aap yahan apni ID likhein
-const MY_ADMIN_PASS = "Sivasagar@2024"; // Aap yahan apna password likhein
+const MY_ADMIN_ID = "yakama_admin";    // Aapki ID
+let MY_ADMIN_PASS = localStorage.getItem('yakama_admin_pass') || "Sivasagar@2024"; // Default Password
 
+// Forgot Password Secret Question Setup
+const SECRET_ANSWER = "sivasagar"; // <--- Yahan apna secret answer set karein (chote akshar mein rakhein)
 // ==========================================
+
 const SUPABASE_URL='https://fwlaurxmofuibodhvsao.supabase.co';
 const SUPABASE_ANON_KEY='sb_publishable_7UPFf5cWJe-SXJXeSyJ19w_VKl_Ehau';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let liveBookings=[],liveTechs=[];
+let generatedOTP = "";
 
-// Login Function
+// ---------- LOGIN ----------
 function login() {
   const id = document.getElementById('adminId').value.trim();
   const pass = document.getElementById('adminPass').value.trim();
@@ -98,11 +129,63 @@ function login() {
   }
 }
 
-// Logout Function
 function logout() {
-  location.reload(); // Page refresh karke wapas login par bhej dega
+  location.reload();
 }
 
+// ---------- FORGOT PASSWORD FLOW ----------
+function showResetScreen() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('resetScreen').style.display = 'block';
+}
+
+function verifyAnswer() {
+  const ans = document.getElementById('secretAnswer').value.trim().toLowerCase();
+  const err = document.getElementById('resetError');
+  
+  if(ans === SECRET_ANSWER) {
+    err.style.display = 'none';
+    document.getElementById('resetStep1').style.display = 'none';
+    document.getElementById('resetStep2').style.display = 'block';
+    
+    // Generate 6-digit OTP
+    generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    document.getElementById('otpDisplay').innerText = generatedOTP;
+    
+    // Note: In real life, we would send this via SMS to 7578062607.
+    // For this demo, we are displaying it on screen.
+    alert("Security Answer Verified! An OTP has been generated.");
+  } else {
+    err.innerText = "Wrong Answer! Try again.";
+    err.style.display = 'block';
+  }
+}
+
+function resetPassword() {
+  const otp = document.getElementById('otpInput').value.trim();
+  const newPass = document.getElementById('newPass').value.trim();
+  const err = document.getElementById('resetError');
+
+  if(otp !== generatedOTP) {
+    err.innerText = "Invalid OTP!";
+    err.style.display = 'block';
+    return;
+  }
+  if(newPass.length < 6) {
+    err.innerText = "Password must be at least 6 characters.";
+    err.style.display = 'block';
+    return;
+  }
+
+  // Save new password to browser's local storage
+  localStorage.setItem('yakama_admin_pass', newPass);
+  MY_ADMIN_PASS = newPass;
+  
+  alert("Password updated successfully! Please login with your new password.");
+  location.reload();
+}
+
+// ---------- DATA LOADING ----------
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function fmtDate(s){if(!s)return '—';try{return new Date(s).toLocaleString()}catch{return s}}
 
@@ -176,7 +259,7 @@ function exportCSV(rows,fields,filename){
   let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href);
 }
 
-// Enter key se login karne ke liye
+// Enter key se login
 document.getElementById('adminPass').addEventListener('keypress', function (e) {
   if (e.key === 'Enter') login();
 });
