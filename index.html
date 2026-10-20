@@ -52,8 +52,8 @@ const $=id=>document.getElementById(id);
 const DEFAULT_OWNER_WHATSAPP='917578062607'; // YAKAMA business WhatsApp number
 // Production setup: paste your Supabase Project URL and anon/publishable key here.
 // Never put a Supabase service_role/secret key in browser code.
-const SUPABASE_URL='PASTE_SUPABASE_PROJECT_URL_HERE';
-const SUPABASE_ANON_KEY='PASTE_SUPABASE_PUBLISHABLE_OR_ANON_KEY_HERE';
+const SUPABASE_URL='https://fwlaurxmofuibodhvsao.supabase.co';
+const SUPABASE_ANON_KEY='sb_publishable_7UPFf5cWJe-SXJXeSyJ19w_VKl_Ehau';
 function supabaseConfigured(){return /^https:\/\//.test(SUPABASE_URL)&&!SUPABASE_URL.includes('PASTE_')&&!SUPABASE_ANON_KEY.includes('PASTE_')&&SUPABASE_ANON_KEY.length>20}
 async function saveToSupabase(table,record){
   if(!supabaseConfigured()) return {configured:false};
