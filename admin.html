@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YAKAMA Admin Panel</title>
+<style>
+:root{--green:#126b5b;--dark:#123c37;--mint:#e6f5ef;--gold:#ffc857;--bg:#f5f8f6;--ink:#18302d;--muted:#62736f;--line:#dbe6e1;--red:#a63232}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.5}
+.wrap{max-width:1120px;margin:auto;padding:20px}
+.panel{background:white;border:1px solid var(--line);border-radius:20px;padding:23px;box-shadow:0 8px 28px #18302d08;max-width:400px;margin:50px auto;}
+h2{text-align:center;color:var(--green);margin-top:0}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:15px}
+.field label{font-size:.9rem;font-weight:800}
+.field input{border:1px solid #cbdad4;border-radius:11px;padding:12px;width:100%;}
+.btn{border:0;border-radius:12px;background:var(--green);color:#fff;font-weight:800;padding:12px 17px;width:100%;cursor:pointer}
+.btn:hover{filter:brightness(.95)}
+.btn.danger{background:var(--red)}
+.btn.light{background:var(--mint);color:var(--dark)}
+#adminArea{display:none;}
+.adminToolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
+.adminStats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.adminStat{background:var(--mint);border-radius:13px;padding:15px;}
+.adminStat strong{display:block;font-size:1.6rem;}
+.tablewrap{overflow:auto;margin-top:14px}
+table{width:100%;border-collapse:collapse;background:white;font-size:.9rem}
+th,td{text-align:left;padding:11px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#eff6f2}
+.empty{color:var(--muted);padding:18px;text-align:center}
+.small{font-size:.8rem;color:var(--muted)}
+.loading{color:var(--muted);padding:18px;text-align:center;font-style:italic}
+.topnav{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+</style></head>
+<body>
+<div class="wrap">
+  <!-- LOGIN SCREEN -->
+  <div id="loginScreen" class="panel">
+    <h2>🔒 Admin Login</h2>
+    <p style="text-align:center;color:var(--muted);font-size:0.9rem;margin-bottom:20px;">Enter ID and Password to access live data</p>
+    <div class="field"><label>Admin ID</label><input id="adminId" placeholder="e.g. amlan"></div>
+    <div class="field"><label>Password</label><input id="adminPass" type="password" placeholder="Enter password"></div>
+    <button class="btn" onclick="login()">Login</button>
+    <p id="loginError" style="color:var(--red);text-align:center;display:none;font-weight:bold;">Wrong ID or Password!</p>
+  </div>
+
+  <!-- MAIN ADMIN AREA -->
+  <div id="adminArea">
+    <div class="topnav">
+      <h2 style="margin:0">Admin Dashboard <span style="font-size:0.7rem;background:#22c55e;color:white;padding:3px 8px;border-radius:10px;vertical-align:middle;">LIVE</span></h2>
+      <button class="btn danger" style="width:auto;padding:8px 15px" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="adminToolbar">
+      <button class="btn" style="width:auto" onclick="loadLiveData()">🔄 Refresh</button>
+      <button class="btn" style="width:auto" onclick="exportCSV(liveBookings,['created_at','customer_name','phone','address','service_type','preferred_date','notes'],'yakama-bookings.csv')">Export Bookings CSV</button>
+      <button class="btn light" style="width:auto" onclick="exportCSV(liveTechs,['created_at','full_name','phone','address','experience_years','skills'],'yakama-technicians.csv')">Export Techs CSV</button>
+    </div>
+
+    <div class="adminStats">
+      <div class="adminStat"><span>Bookings</span><strong id="bookingCount">—</strong></div>
+      <div class="adminStat"><span>Technicians</span><strong id="techCount">—</strong></div>
+    </div>
+
+    <h3>Live Bookings</h3>
+    <div class="tablewrap" id="bookingTable"><div class="loading">Loading...</div></div>
+
+    <h3>Technician Applications</h3>
+    <div class="tablewrap" id="techTable"><div class="loading">Loading...</div></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ==========================================
+// 1. YAHAN APNA ID AUR PASSWORD SET KAREIN
+// ==========================================
+const MY_ADMIN_ID = "yakama_admin";    // Aap yahan apni ID likhein
+const MY_ADMIN_PASS = "Sivasagar@2024"; // Aap yahan apna password likhein
+
+// ==========================================
+const SUPABASE_URL='https://fwlaurxmofuibodhvsao.supabase.co';
+const SUPABASE_ANON_KEY='sb_publishable_7UPFf5cWJe-SXJXeSyJ19w_VKl_Ehau';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let liveBookings=[],liveTechs=[];
+
+// Login Function
+function login() {
+  const id = document.getElementById('adminId').value.trim();
+  const pass = document.getElementById('adminPass').value.trim();
+  
+  if(id === MY_ADMIN_ID && pass === MY_ADMIN_PASS) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('adminArea').style.display = 'block';
+    loadLiveData();
+    subscribeRealtime();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+  }
+}
+
+// Logout Function
+function logout() {
+  location.reload(); // Page refresh karke wapas login par bhej dega
+}
+
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function fmtDate(s){if(!s)return '—';try{return new Date(s).toLocaleString()}catch{return s}}
+
+async function loadLiveData(){
+  document.getElementById('bookingTable').innerHTML='<div class="loading">Loading...</div>';
+  document.getElementById('techTable').innerHTML='<div class="loading">Loading...</div>';
+  try{
+    const { data: b, error: e1 } = await supabase.from('bookings').select('*').order('created_at', {ascending:false});
+    const { data: t, error: e2 } = await supabase.from('technician_applications').select('*').order('created_at', {ascending:false});
+    
+    if(e1) throw e1;
+    if(e2) throw e2;
+
+    liveBookings = b || [];
+    liveTechs = t || [];
+    renderAdmin();
+  }catch(err){
+    document.getElementById('bookingTable').innerHTML='<div class="empty">Error: '+esc(err.message)+'</div>';
+    document.getElementById('techTable').innerHTML='<div class="empty">Error: '+esc(err.message)+'</div>';
+  }
+}
+
+function renderAdmin(){
+  document.getElementById('bookingCount').textContent=liveBookings.length;
+  document.getElementById('techCount').textContent=liveTechs.length;
+  
+  if(!liveBookings.length) {
+    document.getElementById('bookingTable').innerHTML = '<div class="empty">No bookings yet.</div>';
+  } else {
+    document.getElementById('bookingTable').innerHTML = `<table><thead><tr><th>Name</th><th>Phone</th><th>Area</th><th>Service</th><th>Date</th><th>Action</th></tr></thead><tbody>${liveBookings.map(r=>`<tr>
+    <td>${esc(r.customer_name)}</td><td>${esc(r.phone)}</td><td>${esc(r.address)}</td><td>${esc(r.service_type)}<br><small class="small">${esc(r.notes||'')}</small></td><td>${esc(r.preferred_date||'Flexible')}<br><small class="small">${fmtDate(r.created_at)}</small></td><td><button class="btn danger" style="padding:6px 9px;width:auto;" onclick="delBooking(${r.id})">Delete</button></td></tr>`).join('')}</tbody></table>`;
+  }
+
+  if(!liveTechs.length) {
+    document.getElementById('techTable').innerHTML = '<div class="empty">No technician applications yet.</div>';
+  } else {
+    document.getElementById('techTable').innerHTML = `<table><thead><tr><th>Name</th><th>Phone</th><th>Area</th><th>Skills</th><th>Exp</th><th>Action</th></tr></thead><tbody>${liveTechs.map(r=>`<tr>
+    <td>${esc(r.full_name)}</td><td>${esc(r.phone)}</td><td>${esc(r.address)}</td><td>${esc(r.skills||'—')}</td><td>${esc(r.experience_years||0)} yrs<br><small class="small">${fmtDate(r.created_at)}</small></td><td><button class="btn danger" style="padding:6px 9px;width:auto;" onclick="delTech(${r.id})">Delete</button></td></tr>`).join('')}</tbody></table>`;
+  }
+}
+
+async function delBooking(id){
+  if(!confirm('Delete this booking?'))return;
+  try{
+    const {error} = await supabase.from('bookings').delete().eq('id', id);
+    if(error) throw error;
+    liveBookings=liveBookings.filter(x=>x.id!==id);renderAdmin();
+  }catch(err){alert('Delete failed: '+err.message)}
+}
+async function delTech(id){
+  if(!confirm('Delete this application?'))return;
+  try{
+    const {error} = await supabase.from('technician_applications').delete().eq('id', id);
+    if(error) throw error;
+    liveTechs=liveTechs.filter(x=>x.id!==id);renderAdmin();
+  }catch(err){alert('Delete failed: '+err.message)}
+}
+
+function subscribeRealtime(){
+  supabase.channel('custom-all-channel')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => loadLiveData())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'technician_applications' }, () => loadLiveData())
+    .subscribe();
+}
+
+function csvCell(v){return '"'+String(v??'').replace(/"/g,'""')+'"'}
+function exportCSV(rows,fields,filename){
+  if(!rows.length){alert('No records to export.');return}
+  let data=[fields,...rows.map(r=>fields.map(f=>r[f]||''))].map(row=>row.map(csvCell).join(',')).join('\r\n');
+  let blob=new Blob(['\ufeff'+data],{type:'text/csv;charset=utf-8;'});
+  let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href);
+}
+
+// Enter key se login karne ke liye
+document.getElementById('adminPass').addEventListener('keypress', function (e) {
+  if (e.key === 'Enter') login();
+});
+</script>
+</body>
+</html>
