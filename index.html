@@ -47,32 +47,18 @@
 <section class="section"><div class="wrap"><div class="cta"><div><h2 data-i18n="ctaTitle">Sivasagar में electrical service ढूंढना आसान बनाएं</h2><p data-i18n="ctaDesc">Customers और local technicians को जोड़ने वाला YAKAMA platform.</p></div><a class="btn gold" href="#technician" data-i18n="ctaButton">Technician के रूप में जुड़ें →</a></div></div></section>
 </main>
 <footer><div class="wrap foot"><div class="brand" style="color:white"><span class="brandmark">⚡</span><span>YAKAMA Electrical Services<small style="color:#a9c9c1" data-i18n="footerSub">Sivasagar, Assam</small></span></div><div><small data-i18n="footerLine">Live electrical service marketplace • Safety first</small><br><small>© <span id="year"></span> YAKAMA Electrical Services</small></div></div></footer>
+
+<!-- Supabase Official Library -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const $=id=>document.getElementById(id);
 const DEFAULT_OWNER_WHATSAPP='917578062607';
 const SUPABASE_URL='https://fwlaurxmofuibodhvsao.supabase.co';
 const SUPABASE_ANON_KEY='sb_publishable_7UPFf5cWJe-SXJXeSyJ19w_VKl_Ehau';
+
+// Initialize Supabase
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const KEYS={wa:'yakama_demo_owner_whatsapp_v1'};
-
-// ---------- SUPABASE HELPERS ----------
-function sbHeaders(extra={}){return {'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,...extra}}
-function sbUrl(path){return SUPABASE_URL.replace(/\/$/,'')+'/rest/v1/'+path}
-
-async function sbInsert(table,record){
-  const r=await fetch(sbUrl(table),{method:'POST',headers:sbHeaders({'Prefer':'return=representation'}),body:JSON.stringify(record)});
-  if(!r.ok){const body=await r.text();throw new Error('Insert failed ('+r.status+'): '+body.slice(0,200))}
-  return await r.json();
-}
-async function sbSelect(table,order='created_at.desc'){
-  const r=await fetch(sbUrl(table+'?select=*&order='+order),{headers:sbHeaders()});
-  if(!r.ok){const body=await r.text();throw new Error('Fetch failed ('+r.status+'): '+body.slice(0,200))}
-  return await r.json();
-}
-async function sbDelete(table,id){
-  const r=await fetch(sbUrl(table+'?id=eq.'+id),{method:'DELETE',headers:sbHeaders()});
-  if(!r.ok){const body=await r.text();throw new Error('Delete failed ('+r.status+'): '+body.slice(0,200))}
-  return true;
-}
 
 // ---------- I18N ----------
 const t={hi:{
@@ -85,29 +71,30 @@ function tr(k){return (t[lang()]&&t[lang()][k])||t.en[k]||k}
 function setLang(l){localStorage.setItem('yakama_demo_lang',l);document.documentElement.lang=l;$('lang').value=l;document.querySelectorAll('[data-i18n]').forEach(el=>{let k=el.dataset.i18n;if(t[l][k])el.innerHTML=t[l][k]})}
 $('lang').addEventListener('change',e=>setLang(e.target.value));
 
-// ---------- UI HELPERS ----------
+// ---------- HELPERS ----------
 function chooseService(el){$('bservice').value=el.dataset.service;$('booking').scrollIntoView({behavior:'smooth'})}
 function value(id){return $(id).value.trim()}
 function sendWA(msg){let n=(localStorage.getItem(KEYS.wa)||DEFAULT_OWNER_WHATSAPP).replace(/\D/g,'');if(!n){alert('WhatsApp number not set.');return false}window.open('https://wa.me/'+n+'?text='+encodeURIComponent(msg),'_blank','noopener');return true}
 
-// ---------- BOOKING SUBMIT (LIVE) ----------
+// ---------- BOOKING (LIVE DB) ----------
 $('bookingForm').addEventListener('submit',async e=>{
   e.preventDefault();
   const btn=$('bookBtn');const orig=btn.innerHTML;btn.disabled=true;btn.innerHTML=tr('saving');
   let r={customer_name:value('bname'),phone:value('bphone'),service_type:value('bservice'),address:value('barea'),preferred_date:value('bdate')||null,notes:[value('bproperty'),value('bdetails')].filter(Boolean).join(' | ')||null,status:'new'};
   let msg=`YAKAMA Electrical Services - Booking Request\nName: ${r.customer_name}\nPhone: ${r.phone}\nArea: ${r.address}\nService: ${r.service_type}\nPreferred date: ${r.preferred_date||'Flexible'}\nProperty: ${value('bproperty')}\nDetails: ${value('bdetails')||'Not provided'}`;
   try{
-    await sbInsert('bookings',r);
+    const {error} = await supabase.from('bookings').insert([r]);
+    if(error) throw error;
     alert(tr('bookSent'));
     sendWA(msg);
     $('bookingForm').reset();
     if($('adminArea').classList.contains('open'))await loadLiveData();
   }catch(err){
-    alert('Save failed: '+err.message);
+    alert('Save failed: '+ (err.message||'Unknown error'));
   }finally{btn.disabled=false;btn.innerHTML=orig}
 });
 
-// ---------- TECH SUBMIT (LIVE) ----------
+// ---------- TECHNICIAN (LIVE DB) ----------
 $('techForm').addEventListener('submit',async e=>{
   e.preventDefault();
   const btn=$('techBtn');const orig=btn.innerHTML;btn.disabled=true;btn.innerHTML=tr('saving');
@@ -115,13 +102,14 @@ $('techForm').addEventListener('submit',async e=>{
   let r={full_name:value('tname'),phone:value('tphone'),skills:[value('tskills'),value('tlang')].filter(Boolean).join(' | ')||null,experience_years:expMap[value('texp')]||0,address:value('tarea'),status:'pending'};
   let msg=`YAKAMA Electrical Services - Technician Registration\nName: ${r.full_name}\nPhone: ${r.phone}\nArea: ${r.address}\nExperience: ${value('texp')}\nLanguages: ${value('tlang')}\nSkills: ${value('tskills')||'Not provided'}`;
   try{
-    await sbInsert('technician_applications',r);
+    const {error} = await supabase.from('technician_applications').insert([r]);
+    if(error) throw error;
     alert(tr('techSent'));
     sendWA(msg);
     $('techForm').reset();
     if($('adminArea').classList.contains('open'))await loadLiveData();
   }catch(err){
-    alert('Save failed: '+err.message);
+    alert('Save failed: '+ (err.message||'Unknown error'));
   }finally{btn.disabled=false;btn.innerHTML=orig}
 });
 
@@ -146,21 +134,24 @@ $('saveSettings').addEventListener('click',()=>{
 });
 $('refreshBtn').addEventListener('click',loadLiveData);
 
-// ---------- LIVE DATA ----------
+// ---------- LOAD DATA ----------
 let liveBookings=[],liveTechs=[];
 async function loadLiveData(){
   $('bookingTable').innerHTML='<div class="loading">'+tr('loading')+'</div>';
   $('techTable').innerHTML='<div class="loading">'+tr('loading')+'</div>';
   try{
-    const [b,t]=await Promise.all([
-      sbSelect('bookings','created_at.desc'),
-      sbSelect('technician_applications','created_at.desc')
-    ]);
-    liveBookings=b;liveTechs=t;
+    const { data: b, error: e1 } = await supabase.from('bookings').select('*').order('created_at', {ascending:false});
+    const { data: t, error: e2 } = await supabase.from('technician_applications').select('*').order('created_at', {ascending:false});
+    
+    if(e1) throw e1;
+    if(e2) throw e2;
+
+    liveBookings = b || [];
+    liveTechs = t || [];
     renderAdmin();
   }catch(err){
-    $('bookingTable').innerHTML='<div class="empty">Error: '+err.message+'</div>';
-    $('techTable').innerHTML='<div class="empty">Error: '+err.message+'</div>';
+    $('bookingTable').innerHTML='<div class="empty">Error: '+esc(err.message)+'</div>';
+    $('techTable').innerHTML='<div class="empty">Error: '+esc(err.message)+'</div>';
   }
 }
 
@@ -186,42 +177,40 @@ function renderAdmin(){
 }
 function renderWAStatus(){$('waStatus').textContent=(localStorage.getItem(KEYS.wa)||DEFAULT_OWNER_WHATSAPP)?tr('waSet'):tr('waNotSet')}
 
-// ---------- DELETE ----------
+// ---------- DELETE (LIVE DB) ----------
 async function delBooking(id){
   if(!confirm(tr('deleteConfirm')))return;
-  try{await sbDelete('bookings',id);liveBookings=liveBookings.filter(x=>x.id!==id);renderAdmin();}
-  catch(err){alert('Delete failed: '+err.message)}
+  try{
+    const {error} = await supabase.from('bookings').delete().eq('id', id);
+    if(error) throw error;
+    liveBookings=liveBookings.filter(x=>x.id!==id);renderAdmin();
+  }catch(err){alert('Delete failed: '+err.message)}
 }
 async function delTech(id){
   if(!confirm(tr('deleteConfirm')))return;
-  try{await sbDelete('technician_applications',id);liveTechs=liveTechs.filter(x=>x.id!==id);renderAdmin();}
-  catch(err){alert('Delete failed: '+err.message)}
+  try{
+    const {error} = await supabase.from('technician_applications').delete().eq('id', id);
+    if(error) throw error;
+    liveTechs=liveTechs.filter(x=>x.id!==id);renderAdmin();
+  }catch(err){alert('Delete failed: '+err.message)}
 }
 window.delBooking=delBooking;window.delTech=delTech;
 
-// ---------- REALTIME ----------
+// ---------- REALTIME (Official Supabase Way) ----------
 let rtSubscribed=false;
 function subscribeRealtime(){
   if(rtSubscribed)return;rtSubscribed=true;
-  const wsUrl=SUPABASE_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SUPABASE_ANON_KEY+'&vsn=1.0.0';
-  try{
-    const ws=new WebSocket(wsUrl);
-    let ref=0;
-    ws.onopen=()=>{
-      ['bookings','technician_applications'].forEach(tbl=>{
-        ws.send(JSON.stringify({topic:'realtime:public:'+tbl,event:'phx_join',payload:{},ref:++ref}));
-      });
-    };
-    ws.onmessage=(e)=>{
-      try{
-        const m=JSON.parse(e.data);
-        if(m.event==='INSERT'||m.event==='DELETE'||m.event==='UPDATE'){
-          loadLiveData();
-        }
-      }catch{}
-    };
-    ws.onerror=()=>{};
-  }catch(e){console.warn('Realtime error:',e)}
+  
+  supabase.channel('custom-all-channel')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
+      console.log('Realtime: bookings changed', payload);
+      loadLiveData();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'technician_applications' }, (payload) => {
+      console.log('Realtime: techs changed', payload);
+      loadLiveData();
+    })
+    .subscribe();
 }
 
 // ---------- CSV ----------
