@@ -14,7 +14,7 @@
 </head>
 <body>
 <div class="topbar"><div class="wrap toprow"><span data-i18n="topline"></span><span data-i18n="safetyline"></span></div></div>
-<header class="nav"><div class="wrap navrow"><a href="#home" class="brand" style="text-decoration:none"><span class="brandmark">⚡</span><span>YAKAMA Electrical Services<small data-i18n="brandSub"></small></span></a><nav class="navlinks"><a href="#services" data-i18n="navServices"></a><a href="#booking" data-i18n="navBook"></a><a href="#technician" data-i18n="navJoin"></a><select class="lang" id="lang" aria-label="Language"><option value="hi">हिंदी</option><option value="en">English</option><option value="as">অসমীয়া</option></select></nav></div></header>
+<header class="nav"><div class="wrap navrow"><a href="#home" class="brand" style="text-decoration:none"><span class="brandmark">⚡</span><span>YAKAMA Electrical Services<small data-i18n="brandSub"></small></span></a><nav class="navlinks"><a href="#services" data-i18n="navServices"></a><a href="#booking" data-i18n="navBook"></a><a href="#technician" data-i18n="navJoin"></a><select class="lang" id="lang" aria-label="Language"><option value="en">English</option><option value="hi">हिंदी</option><option value="as">অসমীয়া</option></select></nav></div></header>
 <main id="home">
 <section class="hero"><div class="wrap heroGrid"><div><span class="tag" data-i18n="tag"></span><h1 data-i18n="heroTitle"></h1><p data-i18n="heroDesc"></p><div class="heroActions"><a class="btn" href="#booking" data-i18n="bookNow"></a><a class="btn light" href="#services" data-i18n="viewServices"></a></div><div class="trust"><span data-i18n="trust1"></span><span data-i18n="trust2"></span><span data-i18n="trust3"></span></div></div><div class="heroCard"><div class="big">🔌</div><h2 data-i18n="cardTitle"></h2><p data-i18n="cardDesc"></p><div class="heroStats"><div class="stat"><strong>6+</strong><small data-i18n="stat1"></small></div><div class="stat"><strong>3</strong><small data-i18n="stat2"></small></div></div></div></div></section>
 <section class="section" id="services"><div class="wrap"><h2 data-i18n="servicesTitle"></h2><p class="sub" data-i18n="servicesSub"></p><div class="grid">
@@ -53,7 +53,7 @@ const $=id=>document.getElementById(id);
 const DEFAULT_OWNER_WHATSAPP='917578062607';
 const SUPABASE_URL='https://fwlaurxmofuibodhvsao.supabase.co';
 const SUPABASE_ANON_KEY='sb_publishable_7UPFf5cWJe-SXJXeSyJ19w_VKl_Ehau';
-const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+const supabaseClient = (window.supabase && window.supabase.createClient) ? window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY) : null;
 const KEYS={wa:'yakama_demo_owner_whatsapp_v1'};
 const serviceValues=['Complete house wiring','New construction wiring','Wiring repair / fault','Fan, light & switch fitting','MCB / distribution board','Other electrical work'];
 const propertyValues=['House','Flat / apartment','Shop / office','Under construction'];
@@ -76,7 +76,7 @@ as:['সেৱা বাছনি কৰক','সম্পূৰ্ণ ঘৰৰ
 const propertyLabels={hi:['मकान','फ्लैट / अपार्टमेंट','दुकान / ऑफिस','निर्माणाधीन'],en:propertyValues,as:['ঘৰ','ফ্লেট / এপাৰ্টমেণ্ট','দোকান / কাৰ্যালয়','নিৰ্মাণৰত']};
 const expLabels={hi:['0–1 वर्ष','1–3 वर्ष','3–5 वर्ष','5+ वर्ष'],en:expValues,as:['০–১ বছৰ','১–৩ বছৰ','৩–৫ বছৰ','৫+ বছৰ']};
 const languageLabels={hi:['असमिया, हिंदी','असमिया','हिंदी','अंग्रेज़ी','असमिया, हिंदी, अंग्रेज़ी'],en:techLanguageValues,as:['অসমীয়া, হিন্দী','অসমীয়া','হিন্দী','ইংৰাজী','অসমীয়া, হিন্দী, ইংৰাজী']};
-function currentLang(){return localStorage.getItem('yakama_demo_lang')||'hi'}
+function currentLang(){return localStorage.getItem('yakama_demo_lang')||'en'}
 function tr(k){return t[currentLang()]?.[k]||t.en[k]||k}
 function fillSelect(id,values,labels,firstValue=''){
  const el=$(id);el.innerHTML='';
@@ -109,7 +109,7 @@ $('bookingForm').addEventListener('submit',async e=>{
  e.preventDefault();const btn=$('bookBtn'),orig=btn.innerHTML;btn.disabled=true;btn.innerHTML=tr('saving');
  const r={customer_name:value('bname'),phone:value('bphone'),service_type:value('bservice'),address:value('barea'),preferred_date:value('bdate')||null,notes:[value('bproperty'),value('bdetails')].filter(Boolean).join(' | ')||null,status:'new'};
  const msg=`YAKAMA Electrical Services - Booking Request\nName: ${r.customer_name}\nPhone: ${r.phone}\nArea: ${r.address}\nService: ${r.service_type}\nPreferred date: ${r.preferred_date||'Flexible'}\nProperty: ${value('bproperty')}\nDetails: ${value('bdetails')||'Not provided'}`;
- try{const {error}=await supabase.from('bookings').insert([r]);if(error)throw error;alert(tr('bookSent'));sendWA(msg);$('bookingForm').reset();setLang(currentLang())}
+ try{const {error}=await (supabaseClient || Promise.reject(new Error('Database client did not load. Check your internet connection and refresh.'))).from('bookings').insert([r]);if(error)throw error;alert(tr('bookSent'));sendWA(msg);$('bookingForm').reset();setLang(currentLang())}
  catch(err){alert(tr('saveFail')+(err.message||'Unknown error'))}
  finally{btn.disabled=false;btn.innerHTML=orig}
 });
@@ -118,7 +118,7 @@ $('techForm').addEventListener('submit',async e=>{
  const expMap={'0–1 year':0,'1–3 years':2,'3–5 years':4,'5+ years':6};
  const r={full_name:value('tname'),phone:value('tphone'),skills:[value('tskills'),value('tlang')].filter(Boolean).join(' | ')||null,experience_years:expMap[value('texp')]??0,address:value('tarea'),status:'pending'};
  const msg=`YAKAMA Electrical Services - Technician Registration\nName: ${r.full_name}\nPhone: ${r.phone}\nArea: ${r.address}\nExperience: ${value('texp')}\nLanguages: ${value('tlang')}\nSkills: ${value('tskills')||'Not provided'}`;
- try{const {error}=await supabase.from('technician_applications').insert([r]);if(error)throw error;alert(tr('techSent'));sendWA(msg);$('techForm').reset();setLang(currentLang())}
+ try{const {error}=await (supabaseClient || Promise.reject(new Error('Database client did not load. Check your internet connection and refresh.'))).from('technician_applications').insert([r]);if(error)throw error;alert(tr('techSent'));sendWA(msg);$('techForm').reset();setLang(currentLang())}
  catch(err){alert(tr('saveFail')+(err.message||'Unknown error'))}
  finally{btn.disabled=false;btn.innerHTML=orig}
 });
