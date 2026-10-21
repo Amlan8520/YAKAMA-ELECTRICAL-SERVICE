@@ -1,268 +1,224 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>YAKAMA Admin Panel</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#123c37">
+<title>YAKAMA | Secure Admin</title>
 <style>
-:root{--green:#126b5b;--dark:#123c37;--mint:#e6f5ef;--gold:#ffc857;--bg:#f5f8f6;--ink:#18302d;--muted:#62736f;--line:#dbe6e1;--red:#a63232}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.5}
-.wrap{max-width:1120px;margin:auto;padding:20px}
-.panel{background:white;border:1px solid var(--line);border-radius:20px;padding:23px;box-shadow:0 8px 28px #18302d08;max-width:400px;margin:50px auto;}
-h2{text-align:center;color:var(--green);margin-top:0}
-.field{display:flex;flex-direction:column;gap:6px;margin-bottom:15px}
-.field label{font-size:.9rem;font-weight:800}
-.field input{border:1px solid #cbdad4;border-radius:11px;padding:12px;width:100%;}
-.btn{border:0;border-radius:12px;background:var(--green);color:#fff;font-weight:800;padding:12px 17px;width:100%;cursor:pointer}
-.btn:hover{filter:brightness(.95)}
-.btn.danger{background:var(--red)}
-.btn.light{background:var(--mint);color:var(--dark)}
-.textBtn{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;margin-top:15px;width:100%;font-size:0.9rem;}
-#adminArea{display:none;}
-.adminToolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
-.adminStats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
-.adminStat{background:var(--mint);border-radius:13px;padding:15px;}
-.adminStat strong{display:block;font-size:1.6rem;}
-.tablewrap{overflow:auto;margin-top:14px}
-table{width:100%;border-collapse:collapse;background:white;font-size:.9rem}
-th,td{text-align:left;padding:11px;border-bottom:1px solid var(--line);vertical-align:top}
+:root{--g:#126b5b;--d:#123c37;--m:#e6f5ef;--bg:#f5f8f6;--ink:#18302d;--mut:#62736f;--line:#dbe6e1;--red:#a63232}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,Arial,sans-serif}
+.wrap{max-width:1100px;margin:auto;padding:18px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px;margin:16px 0;box-shadow:0 8px 28px #18302d08}
+h1,h2{margin:0 0 8px}
+h1{color:var(--d)}
+.muted{color:var(--mut)}
+label{font-weight:700;display:block;margin:12px 0 5px}
+input{width:100%;padding:12px;border:1px solid #cbdad4;border-radius:10px;font:inherit}
+.btn{border:0;border-radius:10px;background:var(--g);color:white;padding:11px 15px;font-weight:800;cursor:pointer;margin:6px 6px 6px 0}
+.btn.alt{background:var(--m);color:var(--d)}
+.btn.red{background:var(--red)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.stat{background:var(--m);border-radius:12px;padding:14px}
+.stat strong{display:block;font-size:1.6rem}
+.tablewrap{overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:680px;background:white}
+th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
 th{background:#eff6f2}
-.empty{color:var(--muted);padding:18px;text-align:center}
-.small{font-size:.8rem;color:var(--muted)}
-.loading{color:var(--muted);padding:18px;text-align:center;font-style:italic}
-.topnav{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
-.errorMsg{color:var(--red);text-align:center;display:none;font-weight:bold;font-size:0.9rem;margin-top:10px;}
-</style></head>
+.status{padding:10px;border-radius:10px;background:#fff8e4;margin:12px 0;overflow-wrap:anywhere}
+.hidden{display:none!important}
+.error{background:#fff0f0;color:#8a2020}
+.small{font-size:.85rem;color:var(--mut)}
+@media(max-width:520px){.wrap{padding:10px}.card{padding:15px}.stats{grid-template-columns:1fr}}
+</style>
+</head>
 <body>
-<div class="wrap">
-  
-  <!-- LOGIN SCREEN -->
-  <div id="loginScreen" class="panel">
-    <h2>🔒 Admin Login</h2>
-    <div class="field"><label>Admin ID</label><input id="adminId" placeholder="e.g. amlan"></div>
-    <div class="field"><label>Password</label><input id="adminPass" type="password" placeholder="Enter password"></div>
-    <button class="btn" onclick="login()">Login</button>
-    <p id="loginError" class="errorMsg">Wrong ID or Password!</p>
-    <button class="textBtn" onclick="showResetScreen()">Forgot Password?</button>
-  </div>
+<main class="wrap">
+<header class="card">
+<h1>⚡ YAKAMA Electrical Services</h1>
+<div class="muted">Secure admin dashboard · Sivasagar, Assam</div>
+</header>
 
-  <!-- PASSWORD RESET SCREEN -->
-  <div id="resetScreen" class="panel" style="display:none;">
-    <h2>🔑 Reset Password</h2>
-    <p style="text-align:center;color:var(--muted);font-size:0.85rem;">Enter Security Question Answer to generate OTP</p>
-    
-    <!-- Step 1: Answer Secret Question -->
-    <div id="resetStep1">
-      <div class="field"><label>Security Question</label><input value="What is your favorite city?" disabled style="background:#eee"></div>
-      <div class="field"><label>Your Answer</label><input id="secretAnswer" placeholder="Enter answer"></div>
-      <button class="btn" onclick="verifyAnswer()">Verify Answer</button>
-    </div>
+<section id="loginCard" class="card">
+<h2>Admin sign in</h2>
+<p class="muted">Use the email and password for your Supabase Auth admin user. This page does not contain a hard-coded password.</p>
+<form id="loginForm">
+<label for="email">Admin email</label>
+<input id="email" type="email" autocomplete="username" required>
+<label for="password">Password</label>
+<input id="password" type="password" autocomplete="current-password" required>
+<button class="btn" id="loginBtn" type="submit">Sign in</button>
+</form>
+<div id="loginMsg" class="status hidden" role="status"></div>
+</section>
 
-    <!-- Step 2: Enter OTP & New Password -->
-    <div id="resetStep2" style="display:none;">
-      <div class="field"><label>Your OTP (Valid for 5 mins)</label><input id="otpInput" placeholder="Enter OTP shown below"></div>
-      <p style="font-size: 1.2rem; text-align:center; color:var(--green); font-weight:bold; background:var(--mint); padding:10px; border-radius:10px;" id="otpDisplay">----</p>
-      <div class="field"><label>New Password</label><input id="newPass" type="password" placeholder="New password"></div>
-      <button class="btn" onclick="resetPassword()">Update Password</button>
-    </div>
-    
-    <p id="resetError" class="errorMsg"></p>
-    <button class="textBtn" onclick="location.reload()">Back to Login</button>
-  </div>
-
-  <!-- MAIN ADMIN AREA -->
-  <div id="adminArea">
-    <div class="topnav">
-      <h2 style="margin:0">Admin Dashboard <span style="font-size:0.7rem;background:#22c55e;color:white;padding:3px 8px;border-radius:10px;vertical-align:middle;">LIVE</span></h2>
-      <button class="btn danger" style="width:auto;padding:8px 15px" onclick="logout()">Logout</button>
-    </div>
-
-    <div class="adminToolbar">
-      <button class="btn" style="width:auto" onclick="loadLiveData()">🔄 Refresh</button>
-      <button class="btn" style="width:auto" onclick="exportCSV(liveBookings,['created_at','customer_name','phone','address','service_type','preferred_date','notes'],'yakama-bookings.csv')">Export Bookings CSV</button>
-      <button class="btn light" style="width:auto" onclick="exportCSV(liveTechs,['created_at','full_name','phone','address','experience_years','skills'],'yakama-technicians.csv')">Export Techs CSV</button>
-    </div>
-
-    <div class="adminStats">
-      <div class="adminStat"><span>Bookings</span><strong id="bookingCount">—</strong></div>
-      <div class="adminStat"><span>Technicians</span><strong id="techCount">—</strong></div>
-    </div>
-
-    <h3>Live Bookings</h3>
-    <div class="tablewrap" id="bookingTable"><div class="loading">Loading...</div></div>
-
-    <h3>Technician Applications</h3>
-    <div class="tablewrap" id="techTable"><div class="loading">Loading...</div></div>
-  </div>
+<section id="dash" class="hidden">
+<div class="card">
+<h2>Dashboard</h2>
+<div id="who" class="muted"></div>
+<div class="toolbar">
+<button class="btn" id="refresh">↻ Refresh data</button>
+<button class="btn alt" id="exportB">Export bookings CSV</button>
+<button class="btn alt" id="exportT">Export technicians CSV</button>
+<button class="btn red" id="logout">Sign out</button>
 </div>
+<div id="msg" class="status" role="status">Loading records…</div>
+<div class="stats">
+<div class="stat">Bookings<strong id="bc">—</strong></div>
+<div class="stat">Technician applications<strong id="tc">—</strong></div>
+</div>
+</div>
+<div class="card"><h2>Booking requests</h2><div id="bookings" class="tablewrap">Loading…</div></div>
+<div class="card"><h2>Technician applications</h2><div id="techs" class="tablewrap">Loading…</div></div>
+</section>
+
+<footer class="small">Never place a Supabase service-role/secret key in this file. Admin access depends on Supabase Auth and database RLS policies.</footer>
+</main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// ==========================================
-// 1. LOGIN & SECURITY SETTINGS
-// ==========================================
-const MY_ADMIN_ID = "yakama_admin";    // Aapki ID
-let MY_ADMIN_PASS = localStorage.getItem('yakama_admin_pass') || "Sivasagar@2024"; // Default Password
-
-// Forgot Password Secret Question Setup
-const SECRET_ANSWER = "sivasagar"; // <--- Yahan apna secret answer set karein (chote akshar mein rakhein)
-// ==========================================
-
 const SUPABASE_URL='https://fwlaurxmofuibodhvsao.supabase.co';
 const SUPABASE_ANON_KEY='sb_publishable_7UPFf5cWJe-SXJXeSyJ19w_VKl_Ehau';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+const $=id=>document.getElementById(id);
+let bookings=[],techs=[],channel=null;
 
-let liveBookings=[],liveTechs=[];
-let generatedOTP = "";
-
-// ---------- LOGIN ----------
-function login() {
-  const id = document.getElementById('adminId').value.trim();
-  const pass = document.getElementById('adminPass').value.trim();
-  
-  if(id === MY_ADMIN_ID && pass === MY_ADMIN_PASS) {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('adminArea').style.display = 'block';
-    loadLiveData();
-    subscribeRealtime();
-  } else {
-    document.getElementById('loginError').style.display = 'block';
-  }
-}
-
-function logout() {
-  location.reload();
-}
-
-// ---------- FORGOT PASSWORD FLOW ----------
-function showResetScreen() {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('resetScreen').style.display = 'block';
-}
-
-function verifyAnswer() {
-  const ans = document.getElementById('secretAnswer').value.trim().toLowerCase();
-  const err = document.getElementById('resetError');
-  
-  if(ans === SECRET_ANSWER) {
-    err.style.display = 'none';
-    document.getElementById('resetStep1').style.display = 'none';
-    document.getElementById('resetStep2').style.display = 'block';
-    
-    // Generate 6-digit OTP
-    generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
-    document.getElementById('otpDisplay').innerText = generatedOTP;
-    
-    // Note: In real life, we would send this via SMS to 7578062607.
-    // For this demo, we are displaying it on screen.
-    alert("Security Answer Verified! An OTP has been generated.");
-  } else {
-    err.innerText = "Wrong Answer! Try again.";
-    err.style.display = 'block';
-  }
-}
-
-function resetPassword() {
-  const otp = document.getElementById('otpInput').value.trim();
-  const newPass = document.getElementById('newPass').value.trim();
-  const err = document.getElementById('resetError');
-
-  if(otp !== generatedOTP) {
-    err.innerText = "Invalid OTP!";
-    err.style.display = 'block';
-    return;
-  }
-  if(newPass.length < 6) {
-    err.innerText = "Password must be at least 6 characters.";
-    err.style.display = 'block';
-    return;
-  }
-
-  // Save new password to browser's local storage
-  localStorage.setItem('yakama_admin_pass', newPass);
-  MY_ADMIN_PASS = newPass;
-  
-  alert("Password updated successfully! Please login with your new password.");
-  location.reload();
-}
-
-// ---------- DATA LOADING ----------
+function message(s,bad=false){$('msg').textContent=s;$('msg').classList.toggle('error',bad)}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function fmtDate(s){if(!s)return '—';try{return new Date(s).toLocaleString()}catch{return s}}
+function date(s){if(!s)return '—';const d=new Date(s);return Number.isNaN(+d)?esc(s):esc(d.toLocaleString())}
 
-async function loadLiveData(){
-  document.getElementById('bookingTable').innerHTML='<div class="loading">Loading...</div>';
-  document.getElementById('techTable').innerHTML='<div class="loading">Loading...</div>';
+function csv(rows,fields,name){
+  if(!rows.length){alert('No records to export');return}
+  const cell=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const data=[fields,...rows.map(r=>fields.map(f=>r[f]))].map(r=>r.map(cell).join(',')).join('\r\n');
+  const a=document.createElement('a');
+  const u=URL.createObjectURL(new Blob(['\ufeff'+data],{type:'text/csv;charset=utf-8'}));
+  a.href=u;a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(u),1000)
+}
+
+async function verifyAndShow(){
+  const {data:{session}}=await db.auth.getSession();
+  if(!session){
+    $('loginCard').classList.remove('hidden');
+    $('dash').classList.add('hidden');
+    return
+  }
+  const role=session.user.app_metadata?.role;
+  if(role!=='admin'){
+    await db.auth.signOut();
+    $('loginMsg').textContent='Access denied: this Supabase user must have app_metadata role = admin.';
+    $('loginMsg').classList.remove('hidden');
+    return
+  }
+  $('loginCard').classList.add('hidden');
+  $('dash').classList.remove('hidden');
+  $('who').textContent='Signed in: '+session.user.email;
+  await loadData();
+  subscribe()
+}
+
+$('loginForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  $('loginBtn').disabled=true;
+  $('loginMsg').classList.remove('hidden');
+  $('loginMsg').textContent='Signing in…';
   try{
-    const { data: b, error: e1 } = await supabase.from('bookings').select('*').order('created_at', {ascending:false});
-    const { data: t, error: e2 } = await supabase.from('technician_applications').select('*').order('created_at', {ascending:false});
-    
-    if(e1) throw e1;
-    if(e2) throw e2;
-
-    liveBookings = b || [];
-    liveTechs = t || [];
-    renderAdmin();
+    const {error}=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
+    if(error)throw error;
+    await verifyAndShow()
   }catch(err){
-    document.getElementById('bookingTable').innerHTML='<div class="empty">Error: '+esc(err.message)+'</div>';
-    document.getElementById('techTable').innerHTML='<div class="empty">Error: '+esc(err.message)+'</div>';
+    $('loginMsg').textContent='Sign-in failed: '+err.message;
+    $('loginMsg').classList.add('error')
+  }finally{
+    $('loginBtn').disabled=false
   }
-}
-
-function renderAdmin(){
-  document.getElementById('bookingCount').textContent=liveBookings.length;
-  document.getElementById('techCount').textContent=liveTechs.length;
-  
-  if(!liveBookings.length) {
-    document.getElementById('bookingTable').innerHTML = '<div class="empty">No bookings yet.</div>';
-  } else {
-    document.getElementById('bookingTable').innerHTML = `<table><thead><tr><th>Name</th><th>Phone</th><th>Area</th><th>Service</th><th>Date</th><th>Action</th></tr></thead><tbody>${liveBookings.map(r=>`<tr>
-    <td>${esc(r.customer_name)}</td><td>${esc(r.phone)}</td><td>${esc(r.address)}</td><td>${esc(r.service_type)}<br><small class="small">${esc(r.notes||'')}</small></td><td>${esc(r.preferred_date||'Flexible')}<br><small class="small">${fmtDate(r.created_at)}</small></td><td><button class="btn danger" style="padding:6px 9px;width:auto;" onclick="delBooking(${r.id})">Delete</button></td></tr>`).join('')}</tbody></table>`;
-  }
-
-  if(!liveTechs.length) {
-    document.getElementById('techTable').innerHTML = '<div class="empty">No technician applications yet.</div>';
-  } else {
-    document.getElementById('techTable').innerHTML = `<table><thead><tr><th>Name</th><th>Phone</th><th>Area</th><th>Skills</th><th>Exp</th><th>Action</th></tr></thead><tbody>${liveTechs.map(r=>`<tr>
-    <td>${esc(r.full_name)}</td><td>${esc(r.phone)}</td><td>${esc(r.address)}</td><td>${esc(r.skills||'—')}</td><td>${esc(r.experience_years||0)} yrs<br><small class="small">${fmtDate(r.created_at)}</small></td><td><button class="btn danger" style="padding:6px 9px;width:auto;" onclick="delTech(${r.id})">Delete</button></td></tr>`).join('')}</tbody></table>`;
-  }
-}
-
-async function delBooking(id){
-  if(!confirm('Delete this booking?'))return;
-  try{
-    const {error} = await supabase.from('bookings').delete().eq('id', id);
-    if(error) throw error;
-    liveBookings=liveBookings.filter(x=>x.id!==id);renderAdmin();
-  }catch(err){alert('Delete failed: '+err.message)}
-}
-async function delTech(id){
-  if(!confirm('Delete this application?'))return;
-  try{
-    const {error} = await supabase.from('technician_applications').delete().eq('id', id);
-    if(error) throw error;
-    liveTechs=liveTechs.filter(x=>x.id!==id);renderAdmin();
-  }catch(err){alert('Delete failed: '+err.message)}
-}
-
-function subscribeRealtime(){
-  supabase.channel('custom-all-channel')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => loadLiveData())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'technician_applications' }, () => loadLiveData())
-    .subscribe();
-}
-
-function csvCell(v){return '"'+String(v??'').replace(/"/g,'""')+'"'}
-function exportCSV(rows,fields,filename){
-  if(!rows.length){alert('No records to export.');return}
-  let data=[fields,...rows.map(r=>fields.map(f=>r[f]||''))].map(row=>row.map(csvCell).join(',')).join('\r\n');
-  let blob=new Blob(['\ufeff'+data],{type:'text/csv;charset=utf-8;'});
-  let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href);
-}
-
-// Enter key se login
-document.getElementById('adminPass').addEventListener('keypress', function (e) {
-  if (e.key === 'Enter') login();
 });
+
+async function loadData(){
+  message('Loading live records…');
+  $('bookings').textContent='Loading…';
+  $('techs').textContent='Loading…';
+  try{
+    const [b,t]=await Promise.all([
+      db.from('bookings').select('*').order('created_at',{ascending:false}),
+      db.from('technician_applications').select('*').order('created_at',{ascending:false})
+    ]);
+    if(b.error)throw b.error;
+    if(t.error)throw t.error;
+    bookings=b.data||[];
+    techs=t.data||[];
+    $('bc').textContent=bookings.length;
+    $('tc').textContent=techs.length;
+    render();
+    message('Live data loaded successfully.')
+  }catch(e){
+    message('Could not load records: '+e.message,true);
+    $('bookings').textContent='Check Supabase RLS policies and table names.';
+    $('techs').textContent='Check Supabase RLS policies and table names.'
+  }
+}
+
+function render(){
+  $('bookings').innerHTML=bookings.length
+    ?'<table><thead><tr><th>Name</th><th>Phone</th><th>Address</th><th>Service / Notes</th><th>Preferred date</th><th>Created</th><th>Action</th></tr></thead><tbody>'
+      +bookings.map(r=>`<tr><td>${esc(r.customer_name)}</td><td>${esc(r.phone)}</td><td>${esc(r.address)}</td><td>${esc(r.service_type)}<br>${esc(r.notes)}</td><td>${esc(r.preferred_date||'Flexible')}</td><td>${date(r.created_at)}</td><td><button class="btn red" onclick="deleteBooking(${Number(r.id)})">Delete</button></td></tr>`).join('')
+      +'</tbody></table>'
+    :'<p class="muted">No bookings yet.</p>';
+
+  $('techs').innerHTML=techs.length
+    ?'<table><thead><tr><th>Name</th><th>Phone</th><th>Address</th><th>Skills</th><th>Experience</th><th>Status</th><th>Created</th><th>Action</th></tr></thead><tbody>'
+      +techs.map(r=>`<tr><td>${esc(r.full_name)}</td><td>${esc(r.phone)}</td><td>${esc(r.address)}</td><td>${esc(r.skills)}</td><td>${esc(r.experience_years??0)} years</td><td>${esc(r.status)}</td><td>${date(r.created_at)}</td><td><button class="btn red" onclick="deleteTech(${Number(r.id)})">Delete</button></td></tr>`).join('')
+      +'</tbody></table>'
+    :'<p class="muted">No technician applications yet.</p>'
+}
+
+async function deleteBooking(id){
+  if(!confirm('Permanently delete this booking?'))return;
+  const {error}=await db.from('bookings').delete().eq('id',id);
+  if(error){message('Delete failed: '+error.message,true);return}
+  await loadData()
+}
+
+async function deleteTech(id){
+  if(!confirm('Permanently delete this technician application?'))return;
+  const {error}=await db.from('technician_applications').delete().eq('id',id);
+  if(error){message('Delete failed: '+error.message,true);return}
+  await loadData()
+}
+
+window.deleteBooking=deleteBooking;
+window.deleteTech=deleteTech;
+
+function subscribe(){
+  if(channel)return;
+  channel=db.channel('yakama-admin-live')
+    .on('postgres_changes',{event:'*',schema:'public',table:'bookings'},loadData)
+    .on('postgres_changes',{event:'*',schema:'public',table:'technician_applications'},loadData)
+    .subscribe()
+}
+
+$('refresh').onclick=loadData;
+$('exportB').onclick=()=>csv(bookings,['created_at','customer_name','phone','address','service_type','preferred_date','notes','status'],'yakama-bookings.csv');
+$('exportT').onclick=()=>csv(techs,['created_at','full_name','phone','address','experience_years','skills','status'],'yakama-technicians.csv');
+$('logout').onclick=async()=>{
+  if(channel){await db.removeChannel(channel);channel=null}
+  await db.auth.signOut();
+  $('dash').classList.add('hidden');
+  $('loginCard').classList.remove('hidden');
+  $('password').value=''
+};
+
+db.auth.onAuthStateChange((_event,session)=>{
+  if(!session){
+    $('dash').classList.add('hidden');
+    $('loginCard').classList.remove('hidden')
+  }
+});
+
+verifyAndShow();
 </script>
 </body>
 </html>
